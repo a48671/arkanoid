@@ -1,4 +1,5 @@
 const game = {
+    running: true,
     ctx: null,
     platform: null,
     ball: null,
@@ -13,9 +14,25 @@ const game = {
         platform: null,
         block: null
     },
+    sounds: {
+        bump: null
+    },
+    score: 0,
+    addScore: function () {
+        ++this.score;
+
+        if (this.score >= this.blocks.length) {
+            window.requestAnimationFrame(() => this.end('You have won!'));
+        }
+    },
     init: function() {
         this.ctx = document.getElementById('my-canvas').getContext('2d');
         this.setEvents();
+        this.setFontStyle();
+    },
+    setFontStyle: function () {
+        this.ctx.font = '20px Arial';
+        this.ctx.fillStyle = '#FFFFFF';
     },
     setEvents: function () {
         window.addEventListener('keydown', event => {
@@ -41,17 +58,28 @@ const game = {
         let loadedCount = 0;
         const requireCount = Object.keys(this.sprites).length;
 
-        const onLoadImage = () => {
+        const onLoadResource = () => {
             ++loadedCount;
             if (loadedCount >= requireCount) {
                 callback();
             }
         };
 
+        this.loadImages(onLoadResource);
+
+        this.loadSounds(onLoadResource);
+    },
+    loadImages(onLoadResource) {
         for (const key in this.sprites) {
             this.sprites[key] = new Image();
             this.sprites[key].src = './img/' + key + '.png';
-            this.sprites[key].addEventListener('load', onLoadImage)
+            this.sprites[key].addEventListener('load', onLoadResource)
+        }
+    },
+    loadSounds(onLoadResource) {
+        for (const key in this.sounds) {
+            this.sounds[key] = new Audio('./sounds/' + key + '.mp3');
+            this.sounds[key].addEventListener('load', onLoadResource)
         }
     },
     update: function () {
@@ -76,14 +104,17 @@ const game = {
         for (const block of this.blocks) {
             if (block.active && this.ball.collide(block)) {
                 this.ball.bumpBlock(block);
+                this.addScore();
             }
         }    },
     run: function() {
-        window.requestAnimationFrame(() => {
-            this.update();
-            this.render();
-            this.run();
-        })
+        if (this.running) {
+            window.requestAnimationFrame(() => {
+                this.update();
+                this.render();
+                this.run();
+            })
+        }
     },
     render: function () {
         const { ball, platform, ctx, sprites, width, height } = this;
@@ -91,9 +122,11 @@ const game = {
         ctx.clearRect(0, 0, width, height);
 
         ctx.drawImage(sprites.background, 0, 0);
-        ctx.drawImage(sprites.ball, 0, 0, ball.width, ball.height, ball.x, ball.y, ball.width, ball.height);
+        ctx.drawImage(sprites.ball, ball.frameStep * ball.width, 0, ball.width, ball.height, ball.x, ball.y, ball.width, ball.height);
         ctx.drawImage(sprites.platform, platform.x, platform.y);
         this.renderBlocks();
+
+        this.ctx.fillText('Score: ' + this.score, 15, 25);
     },
     renderBlocks: function () {
         const { ctx, sprites, blocks } = this;
@@ -134,6 +167,11 @@ const game = {
         const bottom = top + object.height;
 
         return ({ left, right, top, bottom})
+    },
+    end(message) {
+        game.running = false;
+        alert(message);
+        window.location.reload();
     }
 };
 
@@ -145,9 +183,19 @@ game.ball = {
     velocity: 3,
     dy: 0,
     dx: 0,
+    frameStep: 0,
     start() {
         this.dy = -this.velocity
         this.dx = game.random(-this.velocity, this.velocity);
+        this.animate();
+    },
+    animate() {
+        setInterval(() => {
+            ++this.frameStep;
+            if (this.frameStep >= 4) {
+                this.frameStep = 0;
+            }
+        }, 200);
     },
     move() {
         this.y += this.dy;
@@ -166,17 +214,19 @@ game.ball = {
     bumpBlock(block) {
         this.dy *= -1;
         block.active = false;
+        game.sounds.bump.play();
     },
     bumpPlatform(platform) {
-        if (game.platform.dx) {
-            this.x += game.platform.dx;
+        if (platform.dx) {
+            this.x += platform.dx;
         }
 
         if (this.velocity) {
             this.dy = -this.velocity;
             const touchX = this.x + this.width / 2;
-            this.dx = this.velocity * game.platform.getTouchOffset(touchX);
+            this.dx = this.velocity * platform.getTouchOffset(touchX);
         }
+        game.sounds.bump.play();
     },
     collideWorldBound() {
         const ballRec = game.getRect(this);
@@ -186,14 +236,17 @@ game.ball = {
         if (ballRec.top < 0) {
             this.y = 0;
             this.dy = velocity;
+            game.sounds.bump.play();
         } else if (ballRec.left < 0) {
             this.x = 0;
             this.dx = velocity;
+            game.sounds.bump.play();
         } else if (ballRec.right > game.width) {
             this.x = game.width - this.width;
             this.dx = -velocity;
+            game.sounds.bump.play();
         } else if (ballRec.bottom > game.height) {
-            console.log('game over');
+            game.end('Game over');
         }
     }
 }
