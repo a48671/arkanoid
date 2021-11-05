@@ -79,7 +79,7 @@ const game = {
     loadSounds(onLoadResource) {
         for (const key in this.sounds) {
             this.sounds[key] = new Audio('./sounds/' + key + '.mp3');
-            this.sounds[key].addEventListener('load', onLoadResource)
+            this.sounds[key].addEventListener('canplaythrough', onLoadResource, { once: true });
         }
     },
     update: function () {
