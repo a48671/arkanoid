@@ -80,6 +80,7 @@ const game = {
         for (const key in this.sounds) {
             this.sounds[key] = new Audio('./sounds/' + key + '.mp3');
             this.sounds[key].addEventListener('canplaythrough', onLoadResource, { once: true });
+            this.sounds[key].load();
         }
     },
     update: function () {
@@ -169,9 +170,11 @@ const game = {
         return ({ left, right, top, bottom})
     },
     end(message) {
-        game.running = false;
-        alert(message);
-        window.location.reload();
+        if (game.running) {
+            game.running = false;
+            alert(message);
+            window.location.reload();
+        }
     }
 };
 
