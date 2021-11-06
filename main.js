@@ -6,13 +6,11 @@ const game = {
     blocks: [],
     rows: 4,
     cols: 8,
-    width: 640,
-    height: 360,
+    width: null,
+    height: null,
     sprites: {
-        background: null,
         ball: null,
-        platform: null,
-        block: null
+        platform: null
     },
     sounds: {
         bump: null
@@ -26,9 +24,17 @@ const game = {
         }
     },
     init: function() {
-        this.ctx = document.getElementById('my-canvas').getContext('2d');
+        this.canvas = document.getElementById('my-canvas')
+        this.ctx = this.canvas.getContext('2d');
         this.setEvents();
-        this.setFontStyle();
+        this.width = window.innerWidth - 50;
+        this.height = window.innerHeight - 100;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.platform.x = this.width / 2 - this.platform.width / 2;
+        this.platform.y = this.height - this.platform.height - 30;
+        this.ball.x = this.width / 2 - this.ball.width / 2;
+        this.ball.y = this.platform.y - this.ball.height;
     },
     setFontStyle: function () {
         this.ctx.font = '20px Arial';
@@ -56,7 +62,7 @@ const game = {
     },
     preload: function (callback) {
         let loadedCount = 0;
-        const requireCount = Object.keys(this.sprites).length;
+        const requireCount = Object.keys(this.sprites).length + Object.keys(this.sounds).length;
 
         const onLoadResource = () => {
             ++loadedCount;
@@ -107,7 +113,8 @@ const game = {
                 this.ball.bumpBlock(block);
                 this.addScore();
             }
-        }    },
+        }
+    },
     run: function() {
         if (this.running) {
             window.requestAnimationFrame(() => {
@@ -122,32 +129,37 @@ const game = {
 
         ctx.clearRect(0, 0, width, height);
 
-        ctx.drawImage(sprites.background, 0, 0);
         ctx.drawImage(sprites.ball, ball.frameStep * ball.width, 0, ball.width, ball.height, ball.x, ball.y, ball.width, ball.height);
         ctx.drawImage(sprites.platform, platform.x, platform.y);
         this.renderBlocks();
 
+        this.setFontStyle();
         this.ctx.fillText('Score: ' + this.score, 15, 25);
     },
     renderBlocks: function () {
-        const { ctx, sprites, blocks } = this;
+        const { ctx, blocks } = this;
         for (const block of blocks) {
-            if (!block.active) continue;
-            ctx.drawImage(sprites.block, block.x, block.y);
+            if (block.active) {
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+                ctx.fillStyle = '#ffffff';
+            }
         }
     },
     create: function () {
         const { cols, rows, blocks } = this;
+        const offset = 10;
+        const width = (this.width - offset * (cols + 1)) / cols;
+        const height = 20;
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 blocks.push({
-                    x: 64 * col + 65,
-                    y: 24 * row + 35,
-                    width: 60,
-                    height: 20,
+                    x: offset + (offset + width) * col,
+                    y: 70 + (offset + height) * row,
+                    width: width,
+                    height,
                     active: true
-                })
+                });
             }
         }
     },
@@ -179,11 +191,11 @@ const game = {
 };
 
 game.ball = {
-    x: 320,
-    y: 280,
-    width: 20,
-    height: 20,
-    velocity: 3,
+    x: null,
+    y: null,
+    width: 30,
+    height: 30,
+    velocity: 4,
     dy: 0,
     dx: 0,
     frameStep: 0,
@@ -255,12 +267,12 @@ game.ball = {
 }
 
 game.platform = {
-    width: 100,
-    height: 14,
+    width: 150,
+    height: 20,
     velocity: 6,
     dx: 0,
-    x: 280,
-    y: 300,
+    x: null,
+    y: null,
     ball: game.ball,
     fire() {
       if (this.ball) {
